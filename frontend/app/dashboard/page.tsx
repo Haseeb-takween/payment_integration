@@ -15,6 +15,9 @@ const fraunces = Fraunces({
   variable: "--font-fraunces",
 });
 
+const POLL_INTERVAL_MS = 2000;
+const POLL_ATTEMPTS = 15;
+
 const statusStyles: Record<SubscriptionStatus, string> = {
   active: "border-emerald-400/30 bg-emerald-400/10 text-emerald-300",
   cancelled: "border-zinc-500/30 bg-zinc-500/10 text-zinc-400",
@@ -27,23 +30,83 @@ const statusLabels: Record<SubscriptionStatus, string> = {
   payment_failed: "Payment Failed",
 };
 
+function sleep(ms: number) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
 export default function DashboardPage() {
   const [subscription, setSubscription] = useState<Subscription | null>();
+  const [activating, setActivating] = useState(false);
   const [cancelling, setCancelling] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    fetchSubscription()
-      .then(setSubscription)
-      .catch((err) => setError(err.message));
+    let cancelled = false;
+
+    async function loadSubscription() {
+      const data = await fetchSubscription();
+      if (!cancelled) {
+        setSubscription(data);
+      }
+      return data;
+    }
+
+    async function pollForActiveSubscription() {
+      setActivating(true);
+
+      for (let attempt = 0; attempt < POLL_ATTEMPTS; attempt += 1) {
+        await sleep(POLL_INTERVAL_MS);
+        const data = await fetchSubscription();
+        if (cancelled) return;
+
+        if (data?.status === "active") {
+          setSubscription(data);
+          setActivating(false);
+          window.history.replaceState({}, "", "/dashboard");
+          return;
+        }
+      }
+
+      if (!cancelled) {
+        setActivating(false);
+        setError("Subscription is still activating. Please refresh in a moment.");
+      }
+    }
+
+    async function init() {
+      setError(null);
+
+      try {
+        const fromCheckout =
+          typeof window !== "undefined" &&
+          new URLSearchParams(window.location.search).get("checkout") === "success";
+
+        const data = await loadSubscription();
+        if (cancelled) return;
+
+        if (fromCheckout && !data) {
+          await pollForActiveSubscription();
+        }
+      } catch (err) {
+        if (!cancelled) {
+          setError(err instanceof Error ? err.message : "Failed to load subscription");
+        }
+      }
+    }
+
+    init();
+
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   async function handleCancelSubscription() {
     setCancelling(true);
     setError(null);
     try {
-      const updated = await cancelSubscription();
-      setSubscription(updated);
+      await cancelSubscription();
+      setSubscription(null);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to cancel subscription");
     } finally {
@@ -77,11 +140,13 @@ export default function DashboardPage() {
       </div>
 
       <div className="relative z-10 mt-12 w-full max-w-md rounded-2xl border border-white/10 bg-[#121317] p-8">
-        {subscription === undefined && (
-          <p className="text-center text-sm text-zinc-500">Loading…</p>
+        {(subscription === undefined || activating) && (
+          <p className="text-center text-sm text-zinc-500">
+            {activating ? "Activating your subscription…" : "Loading…"}
+          </p>
         )}
 
-        {subscription === null && (
+        {!activating && subscription === null && (
           <div className="text-center">
             <p className="text-sm text-zinc-400">
               You don&apos;t have an active subscription yet.
@@ -95,7 +160,7 @@ export default function DashboardPage() {
           </div>
         )}
 
-        {subscription && (
+        {!activating && subscription && (
           <>
             <p className="text-sm text-zinc-400">Current plan</p>
             <h2
@@ -127,10 +192,10 @@ export default function DashboardPage() {
               </button>
             )}
 
-            {subscription.status === "cancelled" && (
+            {subscription.status === "payment_failed" && (
               <div className="mt-10 text-center">
-                <p className="text-sm text-zinc-500">
-                  Your subscription has been cancelled.
+                <p className="text-sm text-red-300">
+                  Your last payment failed. Please update your payment method.
                 </p>
                 <a
                   href="/pricing"
@@ -139,12 +204,6 @@ export default function DashboardPage() {
                   View Plans
                 </a>
               </div>
-            )}
-
-            {subscription.status === "payment_failed" && (
-              <p className="mt-10 text-center text-sm text-red-300">
-                Your last payment failed. Please update your payment method.
-              </p>
             )}
           </>
         )}

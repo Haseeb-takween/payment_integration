@@ -2,7 +2,7 @@ import type { Request, Response } from "express";
 import { AppError } from "../middlewares/error.middleware.js";
 import { cancelPaddleSubscription } from "../services/paddle.service.js";
 import {
-  findSubscriptionByUserId,
+  findCurrentSubscriptionByUserId,
   updateSubscriptionStatusByPaddleId,
 } from "../services/subscription.service.js";
 
@@ -16,7 +16,7 @@ function getUserId(req: Request): string {
 
 export async function getSubscription(req: Request, res: Response) {
   const userId = getUserId(req);
-  const subscription = await findSubscriptionByUserId(userId);
+  const subscription = await findCurrentSubscriptionByUserId(userId);
 
   if (!subscription) {
     res.status(200).json({ success: true, data: null });
@@ -36,7 +36,7 @@ export async function getSubscription(req: Request, res: Response) {
 
 export async function cancelSubscription(req: Request, res: Response) {
   const userId = getUserId(req);
-  const subscription = await findSubscriptionByUserId(userId);
+  const subscription = await findCurrentSubscriptionByUserId(userId);
 
   if (!subscription || subscription.status !== "active") {
     throw new AppError(404, "No active subscription found");
@@ -44,18 +44,10 @@ export async function cancelSubscription(req: Request, res: Response) {
 
   await cancelPaddleSubscription(subscription.paddleSubscriptionId, "immediately");
 
-  const updated = await updateSubscriptionStatusByPaddleId(
+  await updateSubscriptionStatusByPaddleId(
     subscription.paddleSubscriptionId,
     "cancelled",
   );
 
-  res.status(200).json({
-    success: true,
-    data: {
-      planId: updated?.planId,
-      planName: updated?.planName,
-      status: updated?.status,
-      currentPeriodEnd: updated?.currentPeriodEnd,
-    },
-  });
+  res.status(200).json({ success: true, data: null });
 }

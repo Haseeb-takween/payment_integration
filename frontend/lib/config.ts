@@ -7,7 +7,7 @@ export const paddleConfig = {
   appUrl,
   defaultLink: `${appUrl}/pricing`,
   successUrl:
-    process.env.NEXT_PUBLIC_PADDLE_SUCCESS_URL ?? `${appUrl}/pricing?checkout=success`,
+    process.env.NEXT_PUBLIC_PADDLE_SUCCESS_URL ?? `${appUrl}/dashboard?checkout=success`,
   cancelUrl:
     process.env.NEXT_PUBLIC_PADDLE_CANCEL_URL ?? `${appUrl}/pricing?checkout=canceled`,
   priceIds: {

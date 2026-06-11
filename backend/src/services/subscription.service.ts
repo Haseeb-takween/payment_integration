@@ -17,8 +17,11 @@ export function getPlanByPriceId(priceId: string) {
   return PLANS_BY_PRICE_ID[priceId];
 }
 
-export function findSubscriptionByUserId(userId: string) {
-  return Subscription.findOne({ userId }).sort({ createdAt: -1 });
+export function findCurrentSubscriptionByUserId(userId: string) {
+  return Subscription.findOne({
+    userId,
+    status: { $in: ["active", "payment_failed"] },
+  }).sort({ createdAt: -1 });
 }
 
 export function findSubscriptionByPaddleId(paddleSubscriptionId: string) {
@@ -34,6 +37,17 @@ export async function upsertSubscriptionFromPaddle(params: {
   status: SubscriptionStatus;
   currentPeriodEnd?: Date | null;
 }) {
+  if (params.status === "active") {
+    await Subscription.updateMany(
+      {
+        userId: params.userId,
+        paddleSubscriptionId: { $ne: params.paddleSubscriptionId },
+        status: "active",
+      },
+      { status: "cancelled" },
+    );
+  }
+
   return Subscription.findOneAndUpdate(
     { paddleSubscriptionId: params.paddleSubscriptionId },
     {

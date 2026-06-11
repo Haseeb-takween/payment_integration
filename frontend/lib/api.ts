@@ -33,8 +33,8 @@ export async function fetchSubscription(): Promise<Subscription | null> {
   return data;
 }
 
-export async function cancelSubscription(): Promise<Subscription> {
-  const { data } = await request<{ data: Subscription }>("/subscription/cancel", {
+export async function cancelSubscription(): Promise<null> {
+  const { data } = await request<{ data: null }>("/subscription/cancel", {
     method: "POST",
   });
   return data;
