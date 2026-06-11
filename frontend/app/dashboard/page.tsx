@@ -192,6 +192,20 @@ export default function DashboardPage() {
               </button>
             )}
 
+            {subscription.status === "cancelled" && (
+              <div className="mt-10 text-center">
+                <p className="text-sm text-zinc-500">
+                  Your subscription has been cancelled.
+                </p>
+                <a
+                  href="/pricing"
+                  className="mt-6 inline-block rounded-full bg-amber-400 px-6 py-3 text-sm font-semibold uppercase tracking-widest text-[#1a1404] transition-colors hover:bg-amber-300"
+                >
+                  View Plans
+                </a>
+              </div>
+            )}
+
             {subscription.status === "payment_failed" && (
               <div className="mt-10 text-center">
                 <p className="text-sm text-red-300">
