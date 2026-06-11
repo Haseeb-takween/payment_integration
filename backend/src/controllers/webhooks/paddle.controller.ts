@@ -7,6 +7,14 @@ import {
   upsertSubscriptionFromPaddle,
 } from "../../services/subscription.service.js";
 
+export function getPaddleWebhookStatus(_req: Request, res: Response) {
+  res.status(200).json({
+    success: true,
+    message: "Paddle webhook endpoint is ready",
+    method: "POST",
+  });
+}
+
 export async function handlePaddleWebhook(req: Request, res: Response) {
   const signature = req.headers["paddle-signature"];
 
@@ -15,7 +23,15 @@ export async function handlePaddleWebhook(req: Request, res: Response) {
     return;
   }
 
-  const event = await unmarshalPaddleEvent(req.body, signature);
+  let event;
+
+  try {
+    event = await unmarshalPaddleEvent(req.body, signature);
+  } catch (error) {
+    console.error("Paddle webhook verification failed:", error);
+    res.status(400).json({ success: false, message: "Invalid Paddle webhook signature" });
+    return;
+  }
 
   switch (event.eventType) {
     case EventName.SubscriptionCreated:
