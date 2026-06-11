@@ -1,8 +1,13 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Fraunces } from "next/font/google";
-import { initializePaddle, type Paddle } from "@paddle/paddle-js";
+import {
+  CheckoutEventNames,
+  initializePaddle,
+  type Paddle,
+  type PaddleEventData,
+} from "@paddle/paddle-js";
 import { confirmSubscription } from "@/lib/api";
 import { paddleConfig } from "@/lib/config";
 import { getUserId } from "@/lib/user";
@@ -115,16 +120,54 @@ function CheckIcon() {
 
 export default function PricingPage() {
   const [paddle, setPaddle] = useState<Paddle>();
+  const pendingPlanRef = useRef<Plan | null>(null);
 
   useEffect(() => {
-    initializePaddle({
-      environment: "sandbox",
-      token: paddleConfig.clientToken,
-    }).then(setPaddle);
+    async function setupPaddle() {
+      const instance = await initializePaddle({
+        environment: "sandbox",
+        token: paddleConfig.clientToken,
+      });
+
+      if (!instance) return;
+
+      instance.Update({
+        eventCallback: async (event: PaddleEventData) => {
+          if (event.name !== CheckoutEventNames.CHECKOUT_COMPLETED) return;
+
+          const plan = pendingPlanRef.current;
+          if (!plan) return;
+
+          const checkoutData = (event.data ?? {}) as Record<string, unknown>;
+          const { subscriptionId, customerId } = readCheckoutIds(checkoutData);
+
+          if (typeof subscriptionId !== "string" || !subscriptionId) return;
+
+          try {
+            await confirmSubscription({
+              planId: plan.id,
+              paddleSubscriptionId: subscriptionId,
+              paddleCustomerId:
+                typeof customerId === "string" ? customerId : undefined,
+            });
+          } catch (error) {
+            console.error("Failed to confirm subscription after checkout:", error);
+          } finally {
+            pendingPlanRef.current = null;
+          }
+        },
+      });
+
+      setPaddle(instance);
+    }
+
+    setupPaddle();
   }, []);
 
   function handleSubscribe(plan: Plan) {
     if (!paddle) return;
+
+    pendingPlanRef.current = plan;
 
     paddle.Checkout.open({
       items: [{ priceId: plan.priceId, quantity: 1 }],
@@ -135,24 +178,6 @@ export default function PricingPage() {
       settings: {
         displayMode: "overlay",
         successUrl: paddleConfig.successUrl,
-      },
-      eventCallback: async (event) => {
-        if (event.name !== "checkout.completed") return;
-
-        const checkoutData = (event.data ?? {}) as Record<string, unknown>;
-        const { subscriptionId, customerId } = readCheckoutIds(checkoutData);
-
-        if (!subscriptionId) return;
-
-        try {
-          await confirmSubscription({
-            planId: plan.id,
-            paddleSubscriptionId: subscriptionId,
-            paddleCustomerId: customerId,
-          });
-        } catch (error) {
-          console.error("Failed to confirm subscription after checkout:", error);
-        }
       },
     });
   }
