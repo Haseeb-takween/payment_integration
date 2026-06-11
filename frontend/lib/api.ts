@@ -33,6 +33,18 @@ export async function fetchSubscription(): Promise<Subscription | null> {
   return data;
 }
 
+export async function confirmSubscription(input: {
+  planId: string;
+  paddleSubscriptionId: string;
+  paddleCustomerId?: string;
+}): Promise<Subscription> {
+  const { data } = await request<{ data: Subscription }>("/subscription/confirm", {
+    method: "POST",
+    body: JSON.stringify(input),
+  });
+  return data;
+}
+
 export async function cancelSubscription(): Promise<null> {
   const { data } = await request<{ data: null }>("/subscription/cancel", {
     method: "POST",

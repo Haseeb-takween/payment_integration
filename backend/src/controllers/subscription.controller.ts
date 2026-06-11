@@ -2,7 +2,9 @@ import type { Request, Response } from "express";
 import { AppError } from "../middlewares/error.middleware.js";
 import { cancelPaddleSubscription } from "../services/paddle.service.js";
 import {
+  activateSubscriptionForUser,
   findCurrentSubscriptionByUserId,
+  toSubscriptionResponse,
   updateSubscriptionStatusByPaddleId,
 } from "../services/subscription.service.js";
 
@@ -25,12 +27,36 @@ export async function getSubscription(req: Request, res: Response) {
 
   res.status(200).json({
     success: true,
-    data: {
-      planId: subscription.planId,
-      planName: subscription.planName,
-      status: subscription.status,
-      currentPeriodEnd: subscription.currentPeriodEnd,
-    },
+    data: toSubscriptionResponse(subscription),
+  });
+}
+
+export async function confirmSubscription(req: Request, res: Response) {
+  const userId = getUserId(req);
+  const { planId, paddleSubscriptionId, paddleCustomerId } = req.body as {
+    planId?: string;
+    paddleSubscriptionId?: string;
+    paddleCustomerId?: string;
+  };
+
+  if (!planId || !paddleSubscriptionId) {
+    throw new AppError(400, "planId and paddleSubscriptionId are required");
+  }
+
+  const subscription = await activateSubscriptionForUser({
+    userId,
+    paddleCustomerId: paddleCustomerId ?? "unknown",
+    paddleSubscriptionId,
+    planId,
+  });
+
+  if (!subscription) {
+    throw new AppError(400, "Unknown plan");
+  }
+
+  res.status(200).json({
+    success: true,
+    data: toSubscriptionResponse(subscription),
   });
 }
 

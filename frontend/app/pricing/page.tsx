@@ -3,8 +3,34 @@
 import { useEffect, useState } from "react";
 import { Fraunces } from "next/font/google";
 import { initializePaddle, type Paddle } from "@paddle/paddle-js";
+import { confirmSubscription } from "@/lib/api";
 import { paddleConfig } from "@/lib/config";
 import { getUserId } from "@/lib/user";
+
+function readCheckoutIds(data: Record<string, unknown>) {
+  const subscriptionId =
+    data.subscription_id ??
+    data.subscriptionId ??
+    (typeof data.subscription === "object" &&
+    data.subscription !== null &&
+    "id" in data.subscription
+      ? String((data.subscription as { id?: string }).id ?? "")
+      : undefined);
+
+  const customerId =
+    data.customer_id ??
+    data.customerId ??
+    (typeof data.customer === "object" &&
+    data.customer !== null &&
+    "id" in data.customer
+      ? String((data.customer as { id?: string }).id ?? "")
+      : undefined);
+
+  return {
+    subscriptionId: subscriptionId || undefined,
+    customerId: customerId || undefined,
+  };
+}
 
 const fraunces = Fraunces({
   subsets: ["latin"],
@@ -109,6 +135,24 @@ export default function PricingPage() {
       settings: {
         displayMode: "overlay",
         successUrl: paddleConfig.successUrl,
+      },
+      eventCallback: async (event) => {
+        if (event.name !== "checkout.completed") return;
+
+        const checkoutData = (event.data ?? {}) as Record<string, unknown>;
+        const { subscriptionId, customerId } = readCheckoutIds(checkoutData);
+
+        if (!subscriptionId) return;
+
+        try {
+          await confirmSubscription({
+            planId: plan.id,
+            paddleSubscriptionId: subscriptionId,
+            paddleCustomerId: customerId,
+          });
+        } catch (error) {
+          console.error("Failed to confirm subscription after checkout:", error);
+        }
       },
     });
   }

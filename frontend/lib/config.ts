@@ -2,12 +2,19 @@ const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3001";
 
 export const apiUrl = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3000/api";
 
+function withCheckoutSuccess(url: string) {
+  if (url.includes("checkout=success")) return url;
+  return url.includes("?") ? `${url}&checkout=success` : `${url}?checkout=success`;
+}
+
+const configuredSuccessUrl =
+  process.env.NEXT_PUBLIC_PADDLE_SUCCESS_URL ?? `${appUrl}/dashboard`;
+
 export const paddleConfig = {
   clientToken: process.env.NEXT_PUBLIC_PADDLE_CLIENT_TOKEN ?? "",
   appUrl,
   defaultLink: `${appUrl}/pricing`,
-  successUrl:
-    process.env.NEXT_PUBLIC_PADDLE_SUCCESS_URL ?? `${appUrl}/dashboard?checkout=success`,
+  successUrl: withCheckoutSuccess(configuredSuccessUrl),
   cancelUrl:
     process.env.NEXT_PUBLIC_PADDLE_CANCEL_URL ?? `${appUrl}/pricing?checkout=canceled`,
   priceIds: {

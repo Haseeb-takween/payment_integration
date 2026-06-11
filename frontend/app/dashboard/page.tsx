@@ -84,7 +84,7 @@ export default function DashboardPage() {
         const data = await loadSubscription();
         if (cancelled) return;
 
-        if (fromCheckout && !data) {
+        if (fromCheckout && data?.status !== "active") {
           await pollForActiveSubscription();
         }
       } catch (err) {
