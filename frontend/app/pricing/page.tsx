@@ -154,6 +154,7 @@ export default function PricingPage() {
             console.error("Failed to confirm subscription after checkout:", error);
           } finally {
             pendingPlanRef.current = null;
+            window.location.href = paddleConfig.successUrl;
           }
         },
       });

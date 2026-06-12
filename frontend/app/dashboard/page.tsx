@@ -141,9 +141,19 @@ export default function DashboardPage() {
 
       <div className="relative z-10 mt-12 w-full max-w-md rounded-2xl border border-white/10 bg-[#121317] p-8">
         {(subscription === undefined || activating) && (
-          <p className="text-center text-sm text-zinc-500">
-            {activating ? "Activating your subscription…" : "Loading…"}
-          </p>
+          <div className="text-center">
+            <p className="text-sm text-zinc-500">
+              {activating ? "Activating your subscription…" : "Loading…"}
+            </p>
+            {activating && (
+              <a
+                href="/dashboard"
+                className="mt-6 inline-block rounded-full bg-amber-400 px-6 py-3 text-sm font-semibold uppercase tracking-widest text-[#1a1404] transition-colors hover:bg-amber-300"
+              >
+                Go to Dashboard
+              </a>
+            )}
+          </div>
         )}
 
         {!activating && subscription === null && (
