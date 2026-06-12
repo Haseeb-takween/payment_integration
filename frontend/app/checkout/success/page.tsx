@@ -1,7 +1,5 @@
 "use client";
 
-import { useEffect } from "react";
-import { useRouter } from "next/navigation";
 import { Fraunces } from "next/font/google";
 
 const fraunces = Fraunces({
@@ -11,19 +9,8 @@ const fraunces = Fraunces({
 });
 
 const DASHBOARD_URL = "/dashboard?checkout=success";
-const REDIRECT_DELAY_MS = 1500;
 
 export default function CheckoutSuccessPage() {
-  const router = useRouter();
-
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      router.push(DASHBOARD_URL);
-    }, REDIRECT_DELAY_MS);
-
-    return () => clearTimeout(timer);
-  }, [router]);
-
   return (
     <div
       className={`${fraunces.variable} relative flex flex-1 flex-col items-center justify-center overflow-hidden bg-[#0a0b0d] px-6 py-24 text-zinc-100 sm:px-10`}
@@ -48,7 +35,7 @@ export default function CheckoutSuccessPage() {
           You&apos;re <span className="italic text-amber-300">all set</span>
         </h1>
         <p className="mt-6 text-sm text-zinc-400">
-          Thanks for subscribing. We&apos;re taking you to your dashboard…
+          Thanks for subscribing. Click below to head to your dashboard.
         </p>
 
         <a

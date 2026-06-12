@@ -136,26 +136,27 @@ export default function PricingPage() {
           if (event.name !== CheckoutEventNames.CHECKOUT_COMPLETED) return;
 
           const plan = pendingPlanRef.current;
-          if (!plan) return;
+          pendingPlanRef.current = null;
 
-          const checkoutData = (event.data ?? {}) as Record<string, unknown>;
-          const { subscriptionId, customerId } = readCheckoutIds(checkoutData);
+          if (plan) {
+            const checkoutData = (event.data ?? {}) as Record<string, unknown>;
+            const { subscriptionId, customerId } = readCheckoutIds(checkoutData);
 
-          if (typeof subscriptionId !== "string" || !subscriptionId) return;
-
-          try {
-            await confirmSubscription({
-              planId: plan.id,
-              paddleSubscriptionId: subscriptionId,
-              paddleCustomerId:
-                typeof customerId === "string" ? customerId : undefined,
-            });
-          } catch (error) {
-            console.error("Failed to confirm subscription after checkout:", error);
-          } finally {
-            pendingPlanRef.current = null;
-            window.location.href = paddleConfig.successUrl;
+            if (typeof subscriptionId === "string" && subscriptionId) {
+              try {
+                await confirmSubscription({
+                  planId: plan.id,
+                  paddleSubscriptionId: subscriptionId,
+                  paddleCustomerId:
+                    typeof customerId === "string" ? customerId : undefined,
+                });
+              } catch (error) {
+                console.error("Failed to confirm subscription after checkout:", error);
+              }
+            }
           }
+
+          window.location.href = paddleConfig.successUrl;
         },
       });
 
